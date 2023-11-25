@@ -2,7 +2,10 @@ import json
 import codecs
 import html2markdown
 import io
+import os
 
+
+# Set file location to your thoughts, links, and attachments JSON
 thoughts_path = "./export/thoughts.json"
 links_path = "./export/links.json"
 attachments_path = "./export/attachments.json"
@@ -107,13 +110,18 @@ for key, value in nodes_json.items():
                 internal_file = "./export/" + node_id + "/" + attachment["Location"]
                 text = []
                 try:
-                    for line in io.open(internal_file):
-                        text.append(line)
-                except UnicodeDecodeError:
-                    text = ""
+                    with io.open(internal_file, 'r') as file:
+                        for line in file:
+                            text.append(line)
+                    text = "".join(text)
 
-                text = "".join(text)
-                text = html2markdown.convert(text)
+                    # Logging the content before conversion
+                    print(f"Converting content from internal_file: {internal_file}")
+                    print(f"Content to be converted: {text[:500]}")  # Print first 500 characters
+
+                    text = html2markdown.convert(text)
+                except Exception as e:
+                    print(f"Error occurred while processing internal_file {internal_file}: {e}")
 
                 try:
                     nodes_json[node_id]["InternalFile"].append(text)
@@ -121,14 +129,22 @@ for key, value in nodes_json.items():
                     nodes_json[node_id]["InternalFile"] = []
                     nodes_json[node_id]["InternalFile"].append(text)
 
-            if attachment["Type"] == NOTESV9:
-                notesv9 = "./export/" + node_id + "/Notes/" + attachment["Location"]
-                text = []
-                for line in io.open(notesv9):
-                    text.append(line)
+                if attachment["Type"] == NOTESV9:
+                    notesv9 = "./export/" + node_id + "/Notes/" + attachment["Location"]
+                    text = []
+                    try:
+                        with io.open(notesv9, 'r') as file:
+                            for line in file:
+                                text.append(line)
+                        text = "".join(text)
 
-                text = "".join(text)
-                text = html2markdown.convert(text)
+                        # Logging the content before conversion
+                        print(f"Converting content from notesv9: {notesv9}")
+                        print(f"Content to be converted: {text[:500]}")  # Print first 500 characters
+
+                        text = html2markdown.convert(text)
+                    except Exception as e:
+                        print(f"Error occurred while processing notesv9 {notesv9}: {e}")
 
                 try:
                     nodes_json[node_id]["Notes"].append(text)
@@ -162,6 +178,12 @@ for _, value in nodes_json.items():
     contents = []
     name = value["Name"].replace("/", "-")
     filename = "./obsidian/" + name + ".md"
+
+    # Extract the directory path from the filename and create it if it doesn't exist
+    directory = os.path.dirname(filename)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
     text_file = open(filename, "w")
     if "InternalFile" in value:
         for attachment in value["InternalFile"]:
